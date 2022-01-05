@@ -114,16 +114,36 @@ class MailgunApiTransport extends AbstractTokenArrayTransport implements \Swift_
             $payload = $this->getPayload($preparedMessage);
 
             $endpoint = sprintf('%s/v3/%s/messages', $this->getEndpoint(), urlencode($this->domain));
-
-            $response = $this->client->post(
-                'https://'.$endpoint,
-                [
-                    'auth' => ['api', $this->apiKey, 'basic'],
-                    'headers' => $preparedMessage['headers'],
-                    'form_params' => $payload,
-                ]
-            );
             
+            if (!$message->getAttachments()) {
+                $response = $this->client->post(
+                    'https://'.$endpoint,
+                    [
+                        'auth' => ['api', $this->apiKey, 'basic'],
+                        'headers' => $preparedMessage['headers'],
+                        'form_params' => $payload,
+                    ]
+                );
+            } else {
+                $postDataMultipart = [];
+                foreach ($message->getAttachments() as $emailAttachment) {
+                    $postDataMultipart[] = [
+                        'name' => 'attachment',
+                        'filename' => $emailAttachment['fileName'], 
+                        'contents' => file_get_contents($emailAttachment['filePath'], 'r'), 
+                    ];
+                }
+                $postDataMultipart = array_merge($this->prepareMultipartParameters($payload), $postDataMultipart);
+                $response = $this->client->post(
+                    'https://'.$endpoint,
+                    [
+                        'auth' => ['api', $this->apiKey, 'basic'],
+                        'headers' => $preparedMessage['headers'],
+                        'multipart' => $postDataMultipart,
+                    ]
+                );
+            }
+
             if (Response::HTTP_OK !== $response->getStatusCode()) {
                 if ('application/json' === $response->getHeaders(false)['content-type'][0]) {
                     $result = $response->toArray(false);
@@ -239,7 +259,6 @@ class MailgunApiTransport extends AbstractTokenArrayTransport implements \Swift_
         } else {
             $this->transportCallback->addFailureByAddress($event['recipient'], $reason, $type);
         }
-        # $this->transportCallback->addFailureByAddress($event['recipient'], $reason, $type);
     }
 
     /**
@@ -292,7 +311,6 @@ class MailgunApiTransport extends AbstractTokenArrayTransport implements \Swift_
             $messageArray['recipient-variables'][$recipient] = [];
             foreach ($mailData['tokens'] as $token => $tokenData) {
                 $messageArray['recipient-variables'][$recipient][$mailgunTokens[$token]] = $tokenData;
-                # $messageArray['recipient-variables'][$recipient]['CUSTOMID'] = $message->leadIdHash . '-' . key($message->getTo());
             }
             if (isset($message->leadIdHash)) {
                 $messageArray['recipient-variables'][$recipient]['hashId'] = $message->leadIdHash;
@@ -338,5 +356,24 @@ class MailgunApiTransport extends AbstractTokenArrayTransport implements \Swift_
 
         // returns true if signature is valid
         return \hash_equals(\hash_hmac('sha256', $timestamp.$token, $this->webhookSigningKey), $signature);
+    }
+
+    /**
+     * Prepare multipart parameters. Make sure each POST parameter is split into an array with 'name' and 'content' keys.
+     */
+    private function prepareMultipartParameters(array $params): array
+    {
+        $postDataMultipart = [];
+        foreach ($params as $key => $value) {
+            // If $value is not an array we cast it to an array
+            foreach ((array) $value as $subValue) {
+                $postDataMultipart[] = [
+                    'name' => $key,
+                    'contents' => $subValue,
+                ];
+            }
+        }
+
+        return $postDataMultipart;
     }
 }
