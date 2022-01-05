@@ -311,10 +311,11 @@ class MailgunApiTransport extends AbstractTokenArrayTransport implements \Swift_
             $messageArray['recipient-variables'][$recipient] = [];
             foreach ($mailData['tokens'] as $token => $tokenData) {
                 $messageArray['recipient-variables'][$recipient][$mailgunTokens[$token]] = $tokenData;
+                if (isset($messageArray['recipient-variables'][$recipient]['tracking_pixel']) ?? null) {
+                    $messageArray['recipient-variables'][$recipient]['hashId'] = substr($messageArray['recipient-variables'][$recipient]['tracking_pixel'],-26, 22);
+                }
             }
-            if (isset($message->leadIdHash)) {
-                $messageArray['recipient-variables'][$recipient]['hashId'] = $message->leadIdHash;
-            }
+
         }
         
         if (empty($messageArray['to'])) {
