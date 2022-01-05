@@ -1,4 +1,4 @@
-# Mailgun API plugin for Mautic v3
+# Mailgun API plugin for Mautic v4
 
 ## Instalation
  - upload the contents in this repo to Mautic instalation `plugins/MauticMailgunMailerBundle`
@@ -27,7 +27,6 @@ Add `https://mautic.loc/mailer/mailgun_api/callback` in the mailgun webhook for 
 
 Now your Mautic will be able to send through mailgun API and track email events such as bounce, failed, unsubscribe, spam according to the webhook you set in mailgun.
 
-Mailgun attachments in process.....
 
 ### Mailgun API plugin for Mautic v2
 To use mailgun api plugin for Mautic V2, switch to branch "V2" and download plugin.
