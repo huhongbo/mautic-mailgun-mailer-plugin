@@ -105,7 +105,7 @@ class MailgunApiTransport extends AbstractTokenArrayTransport implements \Swift_
                 return 0;
             }
         }
-
+        
         try {
             $count = $this->getBatchRecipientCount($message);
 
@@ -123,7 +123,7 @@ class MailgunApiTransport extends AbstractTokenArrayTransport implements \Swift_
                     'form_params' => $payload,
                 ]
             );
-
+            
             if (Response::HTTP_OK !== $response->getStatusCode()) {
                 if ('application/json' === $response->getHeaders(false)['content-type'][0]) {
                     $result = $response->toArray(false);
@@ -234,7 +234,12 @@ class MailgunApiTransport extends AbstractTokenArrayTransport implements \Swift_
             $type = DoNotContact::UNSUBSCRIBED;
         }
 
-        $this->transportCallback->addFailureByAddress($event['recipient'], $reason, $type);
+        if (isset($event['user-variables']['mautic_message_id'])) {
+            $this->transportCallback->addFailureByHashId($event['user-variables']['mautic_message_id'], $reason, $type);
+        } else {
+            $this->transportCallback->addFailureByAddress($event['recipient'], $reason, $type);
+        }
+        # $this->transportCallback->addFailureByAddress($event['recipient'], $reason, $type);
     }
 
     /**
@@ -287,6 +292,10 @@ class MailgunApiTransport extends AbstractTokenArrayTransport implements \Swift_
             $messageArray['recipient-variables'][$recipient] = [];
             foreach ($mailData['tokens'] as $token => $tokenData) {
                 $messageArray['recipient-variables'][$recipient][$mailgunTokens[$token]] = $tokenData;
+                # $messageArray['recipient-variables'][$recipient]['CUSTOMID'] = $message->leadIdHash . '-' . key($message->getTo());
+            }
+            if (isset($message->leadIdHash)) {
+                $messageArray['recipient-variables'][$recipient]['hashId'] = $message->leadIdHash;
             }
         }
         
@@ -305,7 +314,8 @@ class MailgunApiTransport extends AbstractTokenArrayTransport implements \Swift_
             'subject' => $message['subject'],
             'html' => $message['html'],
             'text' => $message['text'],
-            'recipient-variables' => json_encode($message['recipient-variables']),
+            'recipient-variables' => json_encode($message['recipient-variables'], JSON_FORCE_OBJECT),
+            'v:mautic_message_id' => '%recipient.hashId%',
         ];
 
         if (!empty($message['recipients']['cc'])) {
