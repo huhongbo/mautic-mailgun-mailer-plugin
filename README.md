@@ -17,6 +17,9 @@
  - host(is domain): From your admin panel in Mailgin Api
  - API Key From your admin panel in Mailgin Api
 
+### Add attachemnts and tracking to mailgun
+
+
 ### Add webhook URL to mailgun
 
 Add `https://mautic.loc/mailer/mailgun_api/callback` in the mailgun webhook for your selected events:

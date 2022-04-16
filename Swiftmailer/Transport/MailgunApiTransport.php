@@ -320,6 +320,9 @@ class MailgunApiTransport extends AbstractTokenArrayTransport implements \Swift_
         
         if (empty($messageArray['to'])) {
 			$messageArray['to'] = array_keys($messageArray['recipients']['to']);
+            if (isset($message->leadIdHash)) {
+                $messageArray['recipient-variables'][$messageArray['to'][0]]['hashId'] = $message->leadIdHash;
+            }
 		}
 
         return $messageArray;
